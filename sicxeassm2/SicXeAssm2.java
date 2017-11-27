@@ -231,6 +231,9 @@ public class SicXeAssm2 {
                 return LOCCTR += 3 * Integer.parseInt(OPERAND);
                 
             }
+            else if (OPCODE.equals("BASE")){
+                return LOCCTR;
+            }
             else if(OPCODE.equals("RESB")){
                 return LOCCTR += Integer.parseInt(OPERAND);
                 
@@ -289,10 +292,9 @@ public class SicXeAssm2 {
         if(ins.isDirective){
             if(ins.OPCODE.equals("WORD")){
                 BINCODE = Integer.parseInt(ins.OPERAND);
-                OBJECTCODE = String.format("%06X",BINCODE);
-                System.out.println(OBJECTCODE);
+                OBJECTCODE = String.format("%06X",BINCODE);     
             } else if(ins.OPCODE.equals("BASE")){
-                System.out.println(Integer.toHexString(BASEADDRESS));
+                
             } else if(ins.OPCODE.equals("NOBASE")){
                 BASEADDRESS = 0;
             } else if(ins.OPCODE.equals("BYTE")){
@@ -311,7 +313,7 @@ public class SicXeAssm2 {
                     System.out.println(OBJECTCODE.toUpperCase());
                 } else if(testChar == 'X'){
                         OBJECTCODE = charToParse;
-                        System.out.println(OBJECTCODE);
+                        
                 }
                 
                 
@@ -561,7 +563,7 @@ class INSTRUCTION {
     public String toString(){
         String test = "";
             //test += SYMBOL+" "+OPCODE+" "+OPERANDS[0]+ " FORMAT4: "+isFormat4 +" "+"IsImmedaite?: "+isImmediate+" "+"IsIndex: "+isIndexed+" "+Integer.toHexString(ADDRESS);
-            test += SYMBOL+" "+OPCODE+" "+OPERAND+" "+Integer.toHexString(ADDRESS);
+            test += SYMBOL+" "+OPCODE+" "+OPERAND+" "+Integer.toHexString(ADDRESS).toUpperCase();
         return test;
     }
 }
