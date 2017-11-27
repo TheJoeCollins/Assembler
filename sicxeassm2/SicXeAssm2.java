@@ -9,7 +9,11 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.ListIterator;
 import java.util.Scanner;
 
 
@@ -22,6 +26,8 @@ public class SicXeAssm2 {
     private static String PROGRAMNAME;
     private static Hashtable<String, OPT> OPTAB;
     private static Hashtable<String, SYM> SYMTAB;
+    private static LinkedList<INSTRUCTION> INSTRUCTIONS;
+    private static ListIterator INSTR;
     
     
     public static void main(String[] args) {
@@ -30,11 +36,13 @@ public class SicXeAssm2 {
         
         try {
             passOne(args[0]);
+            passTwo(args[0]);
         }
         catch(FileNotFoundException e){
             e.printStackTrace();
             System.out.println("FILE NOT FOUND!");
         }
+        
     }
     
     
@@ -45,7 +53,7 @@ public class SicXeAssm2 {
         FileWriter Intermediate = createFileWriter("Intermediate.txt");
         PrintWriter intWriter = createPrintWriter(Intermediate);
         
-        
+        INSTRUCTIONS = new LinkedList();
         String SYMBOL = null;
         String OPCODE = null;
         String OPERAND = null;
@@ -105,12 +113,27 @@ public class SicXeAssm2 {
             }
             
             if(!SYMBOL.equals("")){
-                SYMTAB.put("SYMBOL",new SYM(SYMBOL,LOCCTR));
+                if(SYMTAB.contains(SYMBOL)){
+                    System.out.println("DUPLICATE SYMBOL");
+                }
+                else {
+                    SYMTAB.put(SYMBOL,new SYM(SYMBOL,LOCCTR));
+                }
             }
+            
             if(!OPCODE.equals("")){
                 INSTRUCTION ins = new INSTRUCTION(SYMBOL,OPCODE,OPERAND,LOCCTR);
+                
+               
                 LOCCTR = incLOCCTR(LOCCTR,OPCODE,OPERAND);
-                System.out.println(ins);
+               System.out.println(ins);
+                if(COMMENT != ""){
+                    intWriter.print(ins+" "+COMMENT+"\n");
+                } else {
+                    intWriter.print(ins+"\n");
+                }
+                      
+                        
             }            
             
             
@@ -123,9 +146,34 @@ public class SicXeAssm2 {
             }
             
         }
+        intWriter.close();
         PROGRAMLENGTH = LOCCTR - STARTADDRESS;
         System.out.println("PROGRAM LENGTH: "+Integer.toHexString(PROGRAMLENGTH));
     }
+    
+    public static void passTwo(String filename){
+        FileWriter OBJECTCODE = createFileWriter(filename+".obj");
+        FileWriter LSTFILE = createFileWriter(filename+".lst");
+        
+        PrintWriter toOBJ = createPrintWriter(OBJECTCODE);
+        
+        INSTR = INSTRUCTIONS.listIterator(0);
+        
+        toOBJ.print(new HeaderRecord(PROGRAMNAME,STARTADDRESS,PROGRAMLENGTH)+"\n");
+        
+        while(INSTR.hasNext()){
+            Object ins = INSTR.next();
+            System.out.println(ins);
+        }
+            
+            
+        
+  
+        
+        toOBJ.close();
+    }
+    
+    
     
     public static boolean isLineEmpty(String line){
         if(line.isEmpty()){
@@ -322,11 +370,35 @@ class INSTRUCTION {
     @Override
     public String toString(){
         String test = "";
-            test += SYMBOL+" "+OPCODE+" "+OPERANDS[0]+ " FORMAT4: "+isFormat4 +" "+"IsImmedaite?: "+isImmediate+" "+"IsIndex: "+isIndexed+" "+Integer.toHexString(ADDRESS);
+            //test += SYMBOL+" "+OPCODE+" "+OPERANDS[0]+ " FORMAT4: "+isFormat4 +" "+"IsImmedaite?: "+isImmediate+" "+"IsIndex: "+isIndexed+" "+Integer.toHexString(ADDRESS);
+            test += SYMBOL+" "+OPCODE+" "+OPERAND+" "+ADDRESS;
         return test;
     }
 }
 
+
+
+
+
+class HeaderRecord {
+    public static String PROGRAMNAME;
+    public static Integer STARTADDRESS;
+    public static Integer PROGRAMLENGTH;
+    
+    public HeaderRecord(String ProgramName, int StartAddress,int ProgramLength){
+        PROGRAMNAME = ProgramName;
+        STARTADDRESS = StartAddress;
+        PROGRAMLENGTH = ProgramLength;
+    }
+    
+    @Override
+    public String toString(){
+        String header = "";
+        
+        header = String.format('H'+"%-6.6s"+"%06X"+"%06X"+"\n",PROGRAMNAME,STARTADDRESS,PROGRAMLENGTH);
+        return header;
+    }
+}
 
 
 
@@ -345,6 +417,7 @@ class INITIALIZERS {
         OPTAB.put("RESB",new OPT("RESB",0,0));
         OPTAB.put("RESW",new OPT("RESW",0,0));
         OPTAB.put("BASE", new OPT("BASE",0,0));
+        OPTAB.put("NOBASE",new OPT("NOBASE",0,0));
         
         
         //Mnemonics with format size and HEX converted to decimal
