@@ -126,12 +126,14 @@ public class SicXeAssm2 {
             if(!OPCODE.equals("")){
                 
                 INSTRUCTION ins = new INSTRUCTION(SYMBOL,OPCODE,OPERAND,LOCCTR);
-                
+                int length = LOCCTR;
                
                 
                 addToList(ins);
                 
                 LOCCTR = incLOCCTR(LOCCTR,OPCODE,OPERAND);
+                length = LOCCTR - length;
+                ins.setLength(length);
                 //System.out.println(ins);
                 if(COMMENT != ""){
                     intWriter.print(ins+" "+COMMENT+"\n");
@@ -171,7 +173,12 @@ public class SicXeAssm2 {
         LISTINSTRUCTIONS = INSTRUCTIONS.listIterator();
         while(LISTINSTRUCTIONS.hasNext()){
             INSTRUCTION ins = LISTINSTRUCTIONS.next();
-            System.out.println(ins);
+            
+            if(ins.OPCODE.equals("BASE")){
+                BASEADDRESS = SYMTAB.get(ins.OPERAND).getAddress();
+            }
+            
+            createObjectCode(ins);
         } 
         
   
@@ -272,6 +279,146 @@ public class SicXeAssm2 {
         
     }
     
+    public static void createObjectCode(INSTRUCTION ins){
+        
+        String OBJECTCODE = "";
+        int BINCODE = 0;
+        
+        System.out.println("OPCODE: "+ins.OPCODE);
+
+        if(ins.isDirective){
+            if(ins.OPCODE.equals("WORD")){
+                BINCODE = Integer.parseInt(ins.OPERAND);
+                OBJECTCODE = String.format("%06X",BINCODE);
+                System.out.println(OBJECTCODE);
+            } else if(ins.OPCODE.equals("BASE")){
+                System.out.println(Integer.toHexString(BASEADDRESS));
+            } else if(ins.OPCODE.equals("NOBASE")){
+                BASEADDRESS = 0;
+            } else if(ins.OPCODE.equals("BYTE")){
+                char testChar = ins.OPERAND.charAt(0);
+                
+                int start = ins.OPERAND.indexOf('\'');
+                int end = ins.OPERAND.length() - 1;
+                
+                String charToParse = ins.OPERAND.substring(start+1, end);
+                
+                if(testChar == 'C'){
+                    for(int i = 0; i < charToParse.length(); i++){
+                        OBJECTCODE += Integer.toHexString(charToParse.charAt(i));
+                        
+                    }
+                    System.out.println(OBJECTCODE.toUpperCase());
+                } else if(testChar == 'X'){
+                        OBJECTCODE = charToParse;
+                        System.out.println(OBJECTCODE);
+                }
+                
+                
+                
+            }
+        } else if(OPTAB.containsKey(ins.OPCODE)){
+            
+            switch (ins.LENGTH){
+                case 1:
+                    
+                    break;
+                case 2:
+                    OBJECTCODE = Integer.toHexString(OPTAB.get(ins.OPCODE).getOpcode()).toUpperCase();
+                    String format = String.format("%02X",SYMTAB.get(ins.OPERANDS[0]).getAddress());
+                    OBJECTCODE += format;
+                    
+                    
+                    break;
+                case 3:
+                case 4:
+                    int n = 1 << 5;
+                    int i = 1 << 4;
+                    int x = 1 << 3;
+                    int b = 1 << 2;
+                    int p = 1 << 1;
+                    int e = 1;
+                    
+                    BINCODE = OPTAB.get(ins.OPCODE).getOpcode() << 4;
+                    
+                    String operand = ins.OPERAND;
+                    
+                    if(ins.OPCODE.equals("RSUB")){
+                        BINCODE = (BINCODE) << 12;
+                    } else {
+                        if(ins.isImmediate){
+                            BINCODE |= i;
+                            operand = operand.substring(1);
+                        } else if(ins.isIndirect) {
+                            BINCODE |= n;
+                            operand = operand.substring(1);
+                        } else {
+                            BINCODE |= n | i;
+                            if(ins.isIndexed){
+                                BINCODE |= x;
+                            }
+                        }
+                    }
+                    
+                    int displacement;
+                    String substring = "";
+                    
+                    if(ins.isImmediate){
+                        substring = ins.OPERANDS[0].substring(1);
+                    } else if(ins.isIndirect){
+                        substring = ins.OPERANDS[0].substring(1);
+                    } else {
+                        substring = ins.OPERANDS[0];
+                    }
+                        
+                    if(SYMTAB.get(substring) == null & substring != ""){
+                        String charLess = "";
+                        if(ins.isImmediate){
+                            charLess = ins.OPERANDS[0].substring(1);
+                        } else if(ins.isIndirect){
+                            charLess = ins.OPERANDS[0].substring(1);
+                        } else {
+                            charLess = substring;
+                        }
+                        displacement = Integer.parseInt(charLess);
+                        
+                    } else if(substring != "") {
+                            int targetAddress = SYMTAB.get(substring).getAddress();
+                            displacement = targetAddress;
+                        if(!ins.isFormat4){
+                            displacement -= ins.ADDRESS + 3;
+                            
+                            if(displacement >= -2048 && displacement <= 2047){
+                                BINCODE |= p;
+                            } else {
+                                BINCODE |= b;
+                                displacement = targetAddress - BASEADDRESS;
+                            }
+                        }
+                        if(ins.isFormat4){
+                            BINCODE |= e;
+                            
+                            BINCODE = (BINCODE << 20) | (displacement & 0xFFFFF);
+                        } else {
+                            BINCODE = (BINCODE << 12) | (displacement & 0xFFF);
+                        }
+                        
+                    }
+                        
+                    
+                        OBJECTCODE = String.format(ins.isFormat4 ? "%08X" : "%06X", BINCODE);
+                    break;
+     
+            }
+            
+            System.out.println(OBJECTCODE);
+        }
+      
+        
+        
+        
+    }
+    
 }
 
 
@@ -297,7 +444,11 @@ class INSTRUCTION {
     public boolean isFormat4;
     public boolean isImmediate;
     public boolean isIndexed;
-    public int  ADDRESS;
+    public boolean isIndirect;
+    public boolean hasOperand;
+    public boolean isDirective;
+    public int LENGTH;
+    public int ADDRESS;
     public int OPERANDADDRESS;
     
     public INSTRUCTION(String SYMBOL,String OPCODE, String OPERAND,String COMMENT,String ERRORS,int address){
@@ -310,10 +461,17 @@ class INSTRUCTION {
         this.ADDRESS = address;
         
         this.isFormat4 = isFormat4();
+        this.isDirective = isDirective();
+        
         if(OPERAND != ""){
             this.isImmediate = isImmediate();
+            this.isIndexed = isIndexed();
+            this.isIndirect = isIndirect();
+            this.hasOperand = true;
+        } else {
+            this.hasOperand = false;
         }
-        this.isIndexed = isIndexed();
+        
         
     }
     
@@ -330,6 +488,7 @@ class INSTRUCTION {
     
     public boolean isFormat4(){
         if(OPCODE.charAt(0) == '+'){
+            OPCODE = OPCODE.substring(1);
             return true;
         }
         else {
@@ -337,7 +496,7 @@ class INSTRUCTION {
         }
     }
     public boolean isImmediate(){
-        if(OPERANDS[0].charAt(0) == '#'){
+        if(OPERAND.charAt(0) == '#'){
             return true;
         } else {
             return false;
@@ -352,6 +511,22 @@ class INSTRUCTION {
             return false;
         }
     }
+    public boolean isIndirect(){ 
+        if(OPERAND.charAt(0) == '@'){
+            return true;
+        } else {
+            return false;
+        }
+        
+    }
+    public boolean isDirective(){
+        if(OPCODE.equals("WORD") || OPCODE.equals("RESB") || OPCODE.equals("BYTE") || OPCODE.equals("RESW") || OPCODE.equals("BASE") || OPCODE.equals("NOBASE")){
+            return true;
+        } else {
+            return false;
+        }
+    }
+    
     
     public String[] setOperands(String Operand){
         OPERANDS = new String[2];
@@ -374,7 +549,9 @@ class INSTRUCTION {
     public void setOperandAddress(int address){
         OPERANDADDRESS = address;
     }
-    
+    public void setLength(int x){
+        this.LENGTH = x;
+    }
     @Override
     public String toString(){
         String test = "";
@@ -408,6 +585,9 @@ class HeaderRecord {
     }
 }
 
+class TextRecord {
+    
+}
 
 
 class INITIALIZERS {
