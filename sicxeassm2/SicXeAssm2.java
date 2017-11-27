@@ -321,14 +321,18 @@ public class SicXeAssm2 {
             
             switch (ins.LENGTH){
                 case 1:
-                    
+                    OBJECTCODE = Integer.toHexString(OPTAB.get(ins.OPCODE).getOpcode());
                     break;
                 case 2:
                     OBJECTCODE = Integer.toHexString(OPTAB.get(ins.OPCODE).getOpcode()).toUpperCase();
-                    String format = String.format("%02X",SYMTAB.get(ins.OPERANDS[0]).getAddress());
+                    String format = String.format("%01X",SYMTAB.get(ins.OPERANDS[0]).getAddress());
                     OBJECTCODE += format;
-                    
-                    
+                    if(ins.OPERANDS[1] != null ){
+                        format = Integer.toHexString(SYMTAB.get(ins.OPERANDS[1]).getAddress());
+                    } else {
+                        format = Integer.toHexString(0);
+                    }
+                    OBJECTCODE += format;
                     break;
                 case 3:
                 case 4:
@@ -394,7 +398,8 @@ public class SicXeAssm2 {
                                 BINCODE |= b;
                                 displacement = targetAddress - BASEADDRESS;
                             }
-                        }
+                        } 
+                        
                         if(ins.isFormat4){
                             BINCODE |= e;
                             
@@ -556,7 +561,7 @@ class INSTRUCTION {
     public String toString(){
         String test = "";
             //test += SYMBOL+" "+OPCODE+" "+OPERANDS[0]+ " FORMAT4: "+isFormat4 +" "+"IsImmedaite?: "+isImmediate+" "+"IsIndex: "+isIndexed+" "+Integer.toHexString(ADDRESS);
-            test += SYMBOL+" "+OPCODE+" "+OPERAND+" "+ADDRESS;
+            test += SYMBOL+" "+OPCODE+" "+OPERAND+" "+Integer.toHexString(ADDRESS);
         return test;
     }
 }
