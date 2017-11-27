@@ -13,8 +13,10 @@ import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.ListIterator;
 import java.util.Scanner;
+import java.util.Stack;
 
 
 public class SicXeAssm2 {
@@ -26,9 +28,8 @@ public class SicXeAssm2 {
     private static String PROGRAMNAME;
     private static Hashtable<String, OPT> OPTAB;
     private static Hashtable<String, SYM> SYMTAB;
-    private static LinkedList<INSTRUCTION> INSTRUCTIONS;
-    private static ListIterator INSTR;
-    
+    public static ArrayList<INSTRUCTION> INSTRUCTIONS;
+    public static ListIterator<INSTRUCTION> LISTINSTRUCTIONS;
     
     public static void main(String[] args) {
         OPTAB = INITIALIZERS.getOPTAB();
@@ -53,7 +54,7 @@ public class SicXeAssm2 {
         FileWriter Intermediate = createFileWriter("Intermediate.txt");
         PrintWriter intWriter = createPrintWriter(Intermediate);
         
-        INSTRUCTIONS = new LinkedList();
+        INSTRUCTIONS = new ArrayList();
         String SYMBOL = null;
         String OPCODE = null;
         String OPERAND = null;
@@ -75,6 +76,7 @@ public class SicXeAssm2 {
         }
         
         inputOfLine = fileScanner.nextLine().trim();
+        
         
         while(!OPCODE.equals("END")){
             OPCODE = "";
@@ -122,11 +124,15 @@ public class SicXeAssm2 {
             }
             
             if(!OPCODE.equals("")){
+                
                 INSTRUCTION ins = new INSTRUCTION(SYMBOL,OPCODE,OPERAND,LOCCTR);
                 
                
+                
+                addToList(ins);
+                
                 LOCCTR = incLOCCTR(LOCCTR,OPCODE,OPERAND);
-               System.out.println(ins);
+                //System.out.println(ins);
                 if(COMMENT != ""){
                     intWriter.print(ins+" "+COMMENT+"\n");
                 } else {
@@ -134,7 +140,7 @@ public class SicXeAssm2 {
                 }
                       
                         
-            }            
+            }
             
             
             
@@ -147,6 +153,7 @@ public class SicXeAssm2 {
             
         }
         intWriter.close();
+        
         PROGRAMLENGTH = LOCCTR - STARTADDRESS;
         System.out.println("PROGRAM LENGTH: "+Integer.toHexString(PROGRAMLENGTH));
     }
@@ -157,16 +164,15 @@ public class SicXeAssm2 {
         
         PrintWriter toOBJ = createPrintWriter(OBJECTCODE);
         
-        INSTR = INSTRUCTIONS.listIterator(0);
+        
         
         toOBJ.print(new HeaderRecord(PROGRAMNAME,STARTADDRESS,PROGRAMLENGTH)+"\n");
         
-        while(INSTR.hasNext()){
-            Object ins = INSTR.next();
+        LISTINSTRUCTIONS = INSTRUCTIONS.listIterator();
+        while(LISTINSTRUCTIONS.hasNext()){
+            INSTRUCTION ins = LISTINSTRUCTIONS.next();
             System.out.println(ins);
-        }
-            
-            
+        } 
         
   
         
@@ -196,7 +202,9 @@ public class SicXeAssm2 {
     public static PrintWriter createPrintWriter(FileWriter file){
         return new PrintWriter(file);
     }
-    
+    public static void addToList(INSTRUCTION x){
+        INSTRUCTIONS.add(x);
+    }
     public static int incLOCCTR(int LOCCTR, String OPCODE, String OPERAND){
         String substring = "";
         if(OPCODE.charAt(0) == '+'){
@@ -280,17 +288,17 @@ public class SicXeAssm2 {
 
 class INSTRUCTION {
     
-    private static String SYMBOL;
-    private static String OPCODE;
-    private static String OPERAND;
-    private static String[] OPERANDS;
-    private static String COMMENT;
-    private static String ERRORS;  
-    private static boolean isFormat4;
-    private static boolean isImmediate;
-    private static boolean isIndexed;
-    private static int  ADDRESS;
-    private static int OPERANDADDRESS;
+    public String SYMBOL;
+    public String OPCODE;
+    public String OPERAND;
+    public String[] OPERANDS;
+    public String COMMENT;
+    public String ERRORS;  
+    public boolean isFormat4;
+    public boolean isImmediate;
+    public boolean isIndexed;
+    public int  ADDRESS;
+    public int OPERANDADDRESS;
     
     public INSTRUCTION(String SYMBOL,String OPCODE, String OPERAND,String COMMENT,String ERRORS,int address){
         this.SYMBOL = SYMBOL;
@@ -317,10 +325,10 @@ class INSTRUCTION {
     }
    
     public INSTRUCTION(String COMMENT){
-        this(null,null,null,COMMENT,null);
+        this(null,null,null,COMMENT,0);
     }
     
-    public static boolean isFormat4(){
+    public boolean isFormat4(){
         if(OPCODE.charAt(0) == '+'){
             return true;
         }
@@ -328,7 +336,7 @@ class INSTRUCTION {
             return false;
         }
     }
-    public static boolean isImmediate(){
+    public boolean isImmediate(){
         if(OPERANDS[0].charAt(0) == '#'){
             return true;
         } else {
@@ -336,7 +344,7 @@ class INSTRUCTION {
         }
             
     }
-    public static boolean isIndexed(){
+    public boolean isIndexed(){
         if(OPERANDS[1] != null && OPERANDS[1].charAt(0) =='X'){
             return true;
         }
@@ -345,7 +353,7 @@ class INSTRUCTION {
         }
     }
     
-    public static String[] setOperands(String Operand){
+    public String[] setOperands(String Operand){
         OPERANDS = new String[2];
         if(Operand == null){
             OPERANDS[0] = null;
@@ -363,7 +371,7 @@ class INSTRUCTION {
             }
         }
     }
-    public static void setOperandAddress(int address){
+    public void setOperandAddress(int address){
         OPERANDADDRESS = address;
     }
     
